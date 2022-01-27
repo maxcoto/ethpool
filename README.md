@@ -1,7 +1,5 @@
 # ETHPool
 
-Exactly Finance Test
-
 Hardhat task to query the total amount of ETH held in the contract:
 
 `npx hardhat --network rinkeby balance --account 0x9598775d63fE58E210Fb3c25c2d8d73d494559e8`
