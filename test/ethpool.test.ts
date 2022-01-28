@@ -82,21 +82,56 @@ describe('ETHPool', () => {
     })
   })
   
+  describe('A and B stake / T rewards / A stakes again', async () => {
+    it('should distribute correctly', async () => {
+      let staked, balance;
+
+      await ethpool.connect(sA).stake({ value: 100 })
+      staked = await ethpool.getStaked()
+      expect(staked).to.eq(100)
+
+      await ethpool.connect(sB).stake({ value: 300 })
+      staked = await ethpool.getStaked()
+      expect(staked).to.eq(400)
+
+      await ethpool.connect(sT).addReward({ value: 200 })
+      balance = await ethpool.getBalance()
+      expect(balance).to.eq(600)
+
+      await ethpool.connect(sA).stake({ value: 500 })
+      staked = await ethpool.getStaked()
+      expect(staked).to.eq(900)
+
+      balance = await ethpool.getBalance()
+      expect(balance).to.eq(1100)
+
+      await ethpool.connect(sA).withdraw()
+      balance = await ethpool.getBalance()
+      expect(balance).to.eq(450)
+
+      await ethpool.connect(sB).withdraw()
+      balance = await ethpool.getBalance()
+      expect(balance).to.eq(0)
+    })
+  })
+
   describe('attemps to withdraw without staking', async () => {
     it('should stop the withdrawal', async () => {
       await expect(ethpool.connect(sA).withdraw())
         .to.be.revertedWith('nothing to withdraw');
     })
   })
+
+  describe('attemps to withdraw with 0 staking', async () => {
+    it('should stop the withdrawal', async () => {
+      await ethpool.connect(sA).stake({ value: 100 })
+      await ethpool.connect(sA).withdraw()
   
-  describe('stakes twice in the same address', async () => {
-    it('should stop the staking', async () => {
-      await ethpool.connect(sA).stake({ value: 3 });
-      await expect(ethpool.connect(sA).stake({ value: 4 }))
-        .to.be.revertedWith('only one stake per account at a time is allowed');
+      await expect(ethpool.connect(sA).withdraw())
+        .to.be.revertedWith('nothing to withdraw');
     })
   })
-  
+
   describe('adds a reward without permission', async () => {
     it('should reject non-team addresses', async () => {
       await ethpool.connect(sA).stake({ value: 3000 });
@@ -104,7 +139,7 @@ describe('ETHPool', () => {
         .to.be.revertedWith('only the team can add rewards');
     })
   })
-  
+
   describe('adds a reward without stakes', async () => {
     it('should reject the addition', async () => {
       await expect(ethpool.connect(sT).addReward({ value: 300 }))

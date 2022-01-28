@@ -9,8 +9,12 @@ contract ETHPool {
   uint St = 0;
   uint precision = 1e8;
 
-  mapping(address => uint) public stakes;
-  mapping(address => uint) public S0;
+  struct Stake {
+    uint amount;
+    uint S0;
+  }
+
+  mapping(address => Stake[]) public stakes;
 
   constructor() {
     team = msg.sender;
@@ -19,7 +23,7 @@ contract ETHPool {
   function getBalance() public view returns (uint) {
     return address(this).balance;
   }
-  
+
   function getStaked() public view returns (uint) {
     return staked;
   }
@@ -34,24 +38,35 @@ contract ETHPool {
   
   function stake() public payable {
     address account = msg.sender;
-    require(stakes[account] == 0, "only one stake per account at a time is allowed");
-
     uint amount = msg.value;
-    stakes[account] = amount;
-    S0[account] = St;
+
+    Stake memory _stake = Stake(amount, St);
+    stakes[account].push(_stake);
+
     staked = staked + amount;
   }
 
   function withdraw() public {
     address account = payable(msg.sender);
-    uint deposited = stakes[account];
-    require(deposited > 0, "nothing to withdraw");
+    uint length = stakes[account].length;
 
-    uint reward = deposited * (St - S0[account]) / precision;
-    uint amount = deposited + reward;
+    require(length > 0, "nothing to withdraw");
 
-    staked = staked - deposited;
-    stakes[account] = 0;
+    uint reward = 0;
+    uint amount = 0;
+    Stake memory _stake;
+
+    for(uint i = 0; i < length; i++){
+      _stake = stakes[account][i];
+
+      reward = _stake.amount * (St - _stake.S0) / precision;
+      amount = amount + _stake.amount + reward;
+
+      staked = staked - _stake.amount;
+      stakes[account][i].amount = 0;
+    }
+
+    require(amount > 0, "nothing to withdraw");
 
     (bool sent, bytes memory _data) = account.call{value: amount}("");
     _data; // unused
