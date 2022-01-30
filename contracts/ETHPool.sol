@@ -63,8 +63,9 @@ contract ETHPool {
       amount = amount + _stake.amount + reward;
 
       staked = staked - _stake.amount;
-      stakes[account][i].amount = 0;
     }
+
+    delete stakes[account];
 
     require(amount > 0, "nothing to withdraw");
 
